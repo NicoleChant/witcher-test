@@ -1,13 +1,17 @@
 import streamlit as st
 import base64
 from google.cloud import storage
-import os
+from google.oauth2 import service_account
 import json
 import random
 
 ## define a storage Client if it doesn't already exist
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+
 if "client" not in st.session_state:
-    st.session_state["client"] = storage.Client()
+    st.session_state["client"] = storage.Client(credentials=credentials)
 
 @st.experimental_memo
 def get_img_as_base64(file):
@@ -74,9 +78,8 @@ st.markdown("<div class='title'> Witcher 3: Quotes </div>" , unsafe_allow_html=T
 
 def get_quote_from_cloud(choice: str) -> dict[str, str]:
     #bucket = st.session_state["client"].bucket(os.getenv("BUCKET_NAME"))
-    client = storage.Client()
-    bucket = client.bucket(os.getenv("BUCKET_NAME"))
-    blob = bucket.blob(os.getenv("BLOB_NAME"))
+    bucket = st.session_state['client'].bucket(st.secrets["BUCKET_NAME"])
+    blob = bucket.blob(st.secrets["BLOB_NAME"])
     data = json.loads(blob.download_as_string())
     return random.choice(
         list(filter(lambda quote: quote.get("author").startswith(choice),
